@@ -1,44 +1,26 @@
 # ib_nucleotide_utils
 
-A lightweight educational bioinformatics toolkit written in pure Python.  
-It provides two main utilities:
+A lightweight educational bioinformatics toolkit written in Python using OOP principles.  
+It provides three main utilities:
 
-1. **DNA/RNA sequence processing** (`run_dna_rna_tools`)  
-2. **FASTQ record filtering** (`filter_fastq`)
-3. **Utilities for input BLAST/FASTA/GenBank file ('bio_files_processor.py')
-
-
-The project is designed for training purposes and uses no external dependencies.
+1. **Biological sequence classes** (`main.py`) — DNA, RNA, and protein sequence objects
+2. **FASTQ filtering** (`filter_fastq.py`) — read filtering via Biopython
+3. **Bioinformatics file processing** (`bio_files_processor_oop.py`) — FASTA, BLAST, GenBank
 
 ---
 
-## Overview
+## Installation
 
-This package contains tools for simple nucleotide operations and FASTQ read filtering.  
-It demonstrates modular design, documentation practices (docstrings, typing), and data validation.
-
-### Features
-Basic operations with nucleotide sequences, FASTQ quality metrics, and on-the-fly streaming filtering are supported. A separate module has been added for working with BLAST output, multiline FASTA, and extraction of neighboring genes from GenBank.
-
--Reverse/Complement/Transcription for DNA & RNA
-
--GC-percentage
-
--Phred+33 decoding and average read quality
-
--Filtering by GC%, length and average quality
-
--Structural validation of FASTQ records
-
--Converting a multiline FASTA → "one line per sequence"
-
--Parsing text BLAST output and extracting top hits
-
--Extracting neighboring genes from GenBank in FASTA
+```bash
+git clone https://github.com/kurzart25/hw4_fasta
+cd hw4_fasta
+pip install -r requirements.txt
+```
 
 ---
 
 ## Project structure
+
 ```
 hw4_fasta/
 │
@@ -48,116 +30,125 @@ hw4_fasta/
 │   ├── example_gbk.gbk
 │   └── example_multiline_fasta.fasta
 │
-├── modules/
-│   ├── fastq_utils.py         
-│   └── rna_dna_tools.py       
+├── test_scripts/
+│   └── test.py
 │
-├── bio_files_processor.py     
-├── filter_fastq.py           
+├── main.py                      # Biological sequence classes  + FilterFASTQ         
+├── bio_files_processor_oop.py   # FASTA / BLAST / GenBank utilities
+├── requirements.txt
 └── README.md
 ```
 
 ---
 
-## Installation:
-```bash
-git clone https://github.com/kurzart25/hw4_fasta/tree/hw5_fastq
-cd hw4_fasta
+## Usage
+
+### 1. Biological sequences (`main.py`)
+
+Four classes are provided: `DNASequence`, `RNASequence`, `AminoAcidSequence`,  
+all inheriting from the abstract base class `BiologicalSequence`.
+
+```python
+from main import DNASequence, RNASequence, AminoAcidSequence
+
+# DNA
+dna = DNASequence("ATGCNATGC")
+print(dna)                    
+print(dna.complement())       
+print(dna.reverse())          
+print(dna.reverse_complement())
+print(dna.transcribe())      
+print(dna[1:4])              
+print(len(dna))               
+
+# RNA
+rna = RNASequence("AUGCN")
+print(rna.complement())       
+
+# Protein
+prot = AminoAcidSequence("ACDEFGHIKLM")
+print(prot.aa_composition())  # {'A': 1, 'C': 1, 'D': 1, ...}
 ```
+
+All sequences validate their alphabet on creation and raise `ValueError` on invalid symbols.
+
 ---
 
-## Usage examples
-### DNA/RNA tools
-```python
-from modules.rna_dna_tools import run_dna_rna_tools
-print(run_dna_rna_tools("ATGC", "reverse"))          
-print(run_dna_rna_tools("ATGC", proc="transcribe")) 
-print(run_dna_rna_tools("AUGC", proc="complement"))  
-```
+### 2. FASTQ filtering (`filter_fastq.py`)
 
-### FASTQ filtering
+Filters reads by GC content, length, and mean Phred quality using Biopython.  
+Returns the number of reads written.
 
-1) filter_fastq
 ```python
 from filter_fastq import filter_fastq
-from modules.example_data import EXAMPLE_FASTQ
 
-input_fastq="example_data/example_fastq.fastq",
-    output_fastq="filtered_example.fastq",
-    gc_bounds=(40, 60),
-    length_bounds=(10, 100),
-    quality_threshold=20.0,
-    on_duplicate="skip",     # 3 options: "skip" | "rename" | "collect"
-    dup_dir="duplicates"     # for duplicates
-)
-print("Written to:", out_path)
-
-print("Kept reads:", list(filtered.keys()))
-```
-2) filter_fastq_stream
-
-```python
-from filter_fastq import filter_fastq_stream
-out_path = filter_fastq_stream(
+n = filter_fastq(
     input_fastq="example_data/example_fastq.fastq",
-    output_fastq="filtered_stream.fastq",
-    gc_bounds=(40, 60),
-    length_bounds=(10, 100),
-    quality_threshold=20.0,
-    strict_headers=True  # True allows to exclude corrupted headers
+    output_fastq="filtered.fastq",
+    gc_bounds=(40, 60),      
+    length_bounds=(50, 200),  
+    quality_threshold=20.0,   
 )
-print("Written to:", out_path)
+print(f"Reads saved: {n}")
 ```
-### Input file utilities (bio_files_processor.py)
-```python
-from bio_files_processor import (
-    convert_multiline_fasta_to_oneline,
-    parse_blast_output,
-    select_genes_from_gbk_to_fasta,
-)
 
-# Multiline FASTA
-one_line_fasta = convert_multiline_fasta_to_oneline(
-    "example_data/example_multiline_fasta.fasta"
-)
-print(one_line_fasta)  
-
-# BLAST - top hits extraction from .txt
-top_hits_txt = parse_blast_output(
-    input_file="example_data/example_blast_results.txt",
-    output_file="blast_top_hits.txt",
-)
-print(top_hits_txt)
-
-# GenBank: neighbouring gene extraction to FASTA file
-gene_selection = select_genes_from_gbk_to_fasta(
-    input_gbk="example_data/example_gbk.gbk",
-    genes=["rpoB", "gene1234"],  # имя гена или locus_tag
-    n_before=1,
-    n_after=1,
-    output_fasta="selected_genes.fasta",
-)
-print(gene_selection)
-```
 ---
 
-## Example output
-Demo run_dna_rna_tools('ATGC', 'reverse'): CGTA
-Kept reads: ['@SRX079802', '@SRX079803', '@SRX079804', ...]
+### 3. File processing utilities (`bio_files_processor_oop.py`)
+
+#### 3a. Multiline FASTA → one-line FASTA
+
+```python
+from bio_files_processor_oop import FastaOnelineConverter
+
+conv = FastaOnelineConverter()
+out = conv.convert("example_data/example_multiline_fasta.fasta")
+print(out)  
+```
+
+#### 3b. BLAST top hits extraction
+
+```python
+from bio_files_processor_oop import BlastTopHitExtractor
+
+blast = BlastTopHitExtractor()
+hits = blast.parse("example_data/example_blast_results.txt")
+for h in hits:
+    print(h.query_index, h.description)
+
+blast.write("top_hits.txt")
+# or in one call:
+blast.parse_and_write("example_data/example_blast_results.txt", "top_hits.txt")
+```
+
+#### 3c. GenBank neighboring CDS → FASTA
+
+Extracts protein translations of CDS entries neighboring the target gene(s).
+
+```python
+from bio_files_processor_oop import GenBankNeighborsExtractor, GenBankNeighborsConfig
+
+gbk = GenBankNeighborsExtractor(GenBankNeighborsConfig(n_before=1, n_after=1))
+out = gbk.extract(
+    input_gbk="example_data/example_gbk.gbk",
+    genes=["phrB", "IFLAKNEJ_00001"],   # gene name or locus_tag
+    output_fasta="neighbors.fasta",
+)
+print(out)  
+```
 
 ---
 
 ## Notes
-Phred+33 scoring scheme: score = ord(char) - 33
 
-All bounds are inclusive (e.g., GC between 40% and 60%)
-
-Invalid FASTQ entries are skipped silently
-
-filter_fastq_stream is focused on large files and low memory consumption.
+- All bounds are inclusive
+- `gc_bounds` accepts either a tuple `(lo, hi)` or a single float (treated as upper bound from 0)
+- `DNASequence`, `RNASequence`, `AminoAcidSequence` are immutable (`frozen=True`)
+- `NucleicAcidSequence` is abstract and cannot be instantiated directly
 
 ---
 
 ## Author
-Artem Stetoi (kurzart25)
+
+Artem Stetoi (kurzart25)  
 GitHub: https://github.com/kurzart25
